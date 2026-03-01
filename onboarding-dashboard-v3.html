@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Check-Fleet Onboarding Agent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ── TOKENS ──────────────────────────────────────────────── */
+:root {
+  --blue:       #0078D3;
+  --blue-dk:    #005fa3;
+  --blue-lt:    #e8f4fd;
+  --blue-ring:  rgba(0,120,211,0.18);
+  --amber:      #b45309;
+  --amber-lt:   #fffbeb;
+  --amber-ring: rgba(180,83,9,0.18);
+  --green:      #0a7a4f;
+  --green-lt:   #f0faf5;
+  --green-ring: rgba(10,122,79,0.18);
+  --red:        #dc2626;
+
+  --bg:         #f4f6f9;
+  --card:       #ffffff;
+  --border:     #e2e6eb;
+  --border-dk:  #cdd2d9;
+  --text:       #111827;
+  --text-2:     #374151;
+  --text-3:     #6b7280;
+  --text-4:     #9ca3af;
+
+  --mono: 'IBM Plex Mono', monospace;
+  --sans: 'IBM Plex Sans', system-ui, sans-serif;
+  --radius: 10px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.07), 0 2px 8px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.09), 0 1px 3px rgba(0,0,0,0.06);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ── HEADER ──────────────────────────────────────────────── */
+.header {
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  padding: 0 28px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logo-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+.logo-name { font-size: 14px; font-weight: 700; color: var(--text); letter-spacing: -0.2px; }
+.logo-sub  { font-size: 11px; color: var(--text-3); font-family: var(--mono); }
+
+.header-center {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-family: var(--mono);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-2);
+}
+.badge .lbl { color: var(--text-4); font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; }
+
+.agent-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--green-lt);
+  color: var(--green);
+  border: 1px solid var(--green-ring);
+  transition: all 0.3s;
+}
+
+.pulse-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+  animation: pulse 1.8s infinite;
+}
+
+@keyframes pulse {
+  0%,100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.5; transform: scale(0.85); }
+}
+
+/* ── PIPELINE ────────────────────────────────────────────── */
+.pipeline-wrap {
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  padding: 16px 28px 0;
+}
+
+.pipeline-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-4);
+  font-family: var(--mono);
+  margin-bottom: 10px;
+}
+
+.pipeline-track {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  height: 58px;
+  margin-bottom: -1px;
+}
+
+/* Chevron stage */
+.stage-chevron {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  padding: 0 18px 0 24px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--sans);
+  cursor: default;
+  transition: all 0.25s;
+  clip-path: polygon(0 0, calc(100% - 13px) 0, 100% 50%, calc(100% - 13px) 100%, 0 100%, 13px 50%);
+  min-width: 0;
+  line-height: 1.2;
+}
+
+.stage-chevron:first-child {
+  clip-path: polygon(0 0, calc(100% - 13px) 0, 100% 50%, calc(100% - 13px) 100%, 0 100%);
+  padding-left: 14px;
+}
+
+.stage-chevron.pending {
+  background: #e4e7ec;
+  color: #374151;
+}
+
+.stage-chevron.done {
+  background: var(--blue);
+  color: white;
+}
+
+.stage-chevron.active {
+  background: var(--blue);
+  color: white;
+  box-shadow: 0 0 0 2px white, 0 0 0 4px var(--blue);
+  z-index: 10;
+  transform: scaleY(1.06);
+}
+
+.stage-chevron.hold {
+  background: var(--amber);
+  color: white;
+  box-shadow: 0 0 0 2px white, 0 0 0 4px var(--amber);
+  z-index: 10;
+  transform: scaleY(1.06);
+}
+
+.stage-chevron .s-top { font-size: 15px; font-weight: 800; color: inherit; }
+.stage-chevron .s-bot { font-size: 12px; font-weight: 700; opacity: 0.9; }
+
+.stage-chevron.pending .s-top { color: #374151; }
+.stage-chevron.pending .s-bot { color: #374151; }
+
+.stage-chevron.done .s-top { font-size: 0; }
+.stage-chevron.done .s-bot { font-size: 0; }
+.stage-chevron.done::after {
+  content: '✓';
+  font-size: 16px;
+  font-weight: 700;
+}
+
+/* arrow pointer below active stage */
+.pipeline-arrows {
+  display: flex;
+  width: 100%;
+  padding: 4px 28px 0;
+  background: var(--card);
+}
+.pipeline-arrows > div { flex: 1; }
+.stage-arrow-down {
+  display: flex;
+  justify-content: center;
+  padding-top: 1px;
+}
+.stage-arrow-down svg { display: block; }
+
+/* ── ACTIVE PANEL ────────────────────────────────────────── */
+.active-panel-wrap {
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 28px 18px;
+}
+
+.active-panel {
+  border: 1.5px solid var(--blue);
+  border-radius: var(--radius);
+  background: var(--blue-lt);
+  overflow: hidden;
+  box-shadow: 0 2px 12px var(--blue-ring);
+  animation: slideIn 0.3s ease;
+}
+
+.active-panel.is-hold  { border-color: var(--amber); background: var(--amber-lt); box-shadow: 0 2px 12px var(--amber-ring); }
+.active-panel.is-complete { border-color: var(--green); background: var(--green-lt); box-shadow: 0 2px 12px var(--green-ring); }
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.panel-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 20px;
+  border-bottom: 1px solid rgba(0,120,211,0.15);
+  position: relative;
+}
+.is-hold .panel-topbar     { border-bottom-color: rgba(180,83,9,0.15); }
+.is-complete .panel-topbar { border-bottom-color: rgba(10,122,79,0.2); }
+
+.panel-tag {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--blue);
+}
+.is-hold .panel-tag     { color: var(--amber); }
+.is-complete .panel-tag { color: var(--green); }
+
+.tag-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: pulse 1.8s infinite;
+}
+.is-complete .tag-dot { animation: none; }
+
+.panel-day {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-3);
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 2px 10px;
+  position: absolute;
+  right: 20px;
+}
+
+.panel-main {
+  flex: 1;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+}
+
+.panel-title    { font-size: 19px; font-weight: 700; color: var(--text); line-height: 1.3; text-align: center; }
+.panel-subtitle { font-size: 13px; color: var(--text-3); font-family: var(--mono); text-align: center; }
+
+.panel-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
+.detail-chip {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.detail-lbl {
+  font-family: var(--mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-4);
+}
+
+.detail-val {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+.detail-val.blue   { color: var(--blue); }
+.detail-val.amber  { color: var(--amber); font-weight: 600; }
+.detail-val.green  { color: var(--green); }
+
+.panel-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--blue);
+  background: white;
+  border: 1px solid rgba(0,120,211,0.2);
+  border-radius: 6px;
+  padding: 7px 12px;
+  width: fit-content;
+}
+.is-hold .panel-status     { color: var(--amber); border-color: rgba(180,83,9,0.2); }
+.is-complete .panel-status { color: var(--green); border-color: rgba(10,122,79,0.25); }
+
+.spinner {
+  width: 13px; height: 13px;
+  border: 2px solid rgba(0,120,211,0.2);
+  border-top-color: var(--blue);
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.panel-actions {
+  display: flex;
+  justify-content: center;
+  padding: 4px 0 8px;
+  width: 100%;
+}
+
+/* ── BUTTONS ────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 9px 16px;
+  border-radius: 8px;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+
+.btn-blue  { background: var(--blue); color: white; }
+.btn-blue:hover  { background: var(--blue-dk); transform: translateY(-1px); box-shadow: 0 3px 10px rgba(0,120,211,0.3); }
+
+.btn-green { background: var(--green-lt); color: var(--green); border: 1px solid rgba(10,122,79,0.3); }
+.btn-green:hover { background: #d1f0e3; transform: translateY(-1px); }
+
+.btn-ghost { background: white; color: var(--text-2); border: 1px solid var(--border-dk); }
+.btn-ghost:hover { border-color: var(--text-3); }
+
+/* ── MAIN CONTENT GRID ───────────────────────────────────── */
+.main {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  padding: 18px 28px 100px;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--border);
+  background: #fafbfc;
+}
+
+.card-hdr-title {
+  font-family: var(--mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--text-3);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.live-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--green);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+/* ── LOG ────────────────────────────────────────────────── */
+.log-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 10px;
+  max-height: 380px;
+}
+.log-body::-webkit-scrollbar { width: 4px; }
+.log-body::-webkit-scrollbar-thumb { background: var(--border-dk); border-radius: 2px; }
+
+.log-entry {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: 5px;
+  animation: logIn 0.2s ease;
+}
+.log-entry:hover { background: var(--bg); }
+
+@keyframes logIn {
+  from { opacity: 0; transform: translateX(-3px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.log-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 5px;
+}
+.dot-info    { background: var(--text-4); }
+.dot-success { background: var(--green); }
+.dot-warning { background: var(--amber); }
+.dot-data    { background: var(--blue); }
+
+.log-time { font-family: var(--mono); font-size: 10px; color: var(--text-4); flex-shrink: 0; min-width: 76px; padding-top: 1px; }
+.log-msg  { font-size: 12.5px; line-height: 1.45; color: var(--text-2); }
+.log-msg.success { color: var(--green); }
+.log-msg.warning { color: var(--amber); }
+.log-msg.data    { color: var(--blue); }
+
+/* ── RESULTS PANEL ──────────────────────────────────────── */
+.results-body {
+  flex: 1;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.result-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  animation: resultIn 0.4s ease;
+}
+
+.result-row.pending {
+  opacity: 0.35;
+  background: transparent;
+  border-style: dashed;
+  animation: none;
+}
+
+@keyframes resultIn {
+  from { opacity: 0; transform: translateX(10px); border-color: var(--blue); background: var(--blue-lt); }
+  to   { opacity: 1; transform: translateX(0);    border-color: var(--border); background: var(--bg); }
+}
+
+.result-icon {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.result-icon.done    { background: var(--green-lt); color: var(--green); border: 1.5px solid rgba(10,122,79,0.3); }
+.result-icon.pending { background: transparent; color: var(--text-4); border: 1.5px dashed var(--border-dk); }
+
+.result-text { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.result-label { font-size: 13px; font-weight: 600; color: var(--text); }
+.result-label.pending { color: var(--text-4); font-weight: 400; }
+.result-detail { font-family: var(--mono); font-size: 11px; color: var(--blue); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ── FIXED CONTROLS ─────────────────────────────────────── */
+.controls-bar {
+  position: fixed;
+  bottom: 20px;
+  right: 24px;
+  display: flex;
+  gap: 8px;
+  z-index: 200;
+}
+
+.ctrl-btn {
+  padding: 9px 18px;
+  border-radius: 8px;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--border-dk);
+  background: var(--card);
+  color: var(--text-2);
+  box-shadow: var(--shadow-md);
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ctrl-btn:hover { border-color: var(--blue); color: var(--text); }
+.ctrl-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.ctrl-btn.primary {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: white;
+}
+.ctrl-btn.primary:hover { background: var(--blue-dk); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,120,211,0.3); }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="logo">
+    <img src="data:image/png;base64,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" alt="GPS Dashboard" style="height:22px;width:auto;display:block;flex-shrink:0;">
+    <div class="logo-text">
+      <div class="logo-name">Geotab &amp; Check-Fleet</div>
+      <div class="logo-sub">Onboarding Agent</div>
+    </div>
+  </div>
+
+  <div class="header-center">
+    <div class="badge"><span class="lbl">Customer</span> <span id="hdr-customer">—</span></div>
+    <div class="badge"><span class="lbl">Opportunity</span> <span id="hdr-opp">OPP-2026-0031</span></div>
+  </div>
+
+  <div class="agent-pill" id="agentPill">
+    <div class="pulse-dot"></div>
+    <span id="agentPillText">Idle</span>
+  </div>
+</header>
+
+<!-- PIPELINE -->
+<div class="pipeline-wrap">
+  <div class="pipeline-label">Onboarding Pipeline</div>
+  <div class="pipeline-track" id="pipelineTrack"></div>
+</div>
+
+<!-- ARROW ROW -->
+<div class="pipeline-arrows" id="pipelineArrows"></div>
+
+<!-- ACTIVE PANEL -->
+<div class="active-panel-wrap">
+  <div class="active-panel" id="activePanel"></div>
+</div>
+
+<!-- MAIN: LOG + SF -->
+<div class="main">
+  <div class="card">
+    <div class="card-hdr">
+      <div class="card-hdr-title">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Agent Activity Log
+      </div>
+      <div class="live-chip"><div class="pulse-dot" style="width:5px;height:5px"></div> Live</div>
+    </div>
+    <div class="log-body" id="logBody"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-hdr">
+      <div class="card-hdr-title">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        Onboarding Results
+      </div>
+      <div class="live-chip"><div class="pulse-dot" style="width:5px;height:5px"></div> Live</div>
+    </div>
+    <div id="resultsBody" class="results-body"></div>
+  </div>
+</div>
+
+<!-- CONTROLS -->
+<div class="controls-bar">
+  <button class="ctrl-btn" onclick="resetDemo()">↺ Reset</button>
+  <button class="ctrl-btn primary" id="startBtn" onclick="startWorkflow()">▶ Start Onboarding</button>
+</div>
+
+<script>
+const API = 'http://localhost:3000';
+const OPP_ID = '006VE00000TNE6PYAX';
+
+// ── STAGE DEFINITIONS ────────────────────────────────────────
+const STAGES = [
+  { id:'trigger',  top:'SF Trigger',  bot:'Closed Won'  },
+  { id:'customer', top:'MyAdmin',     bot:'Add Customer'},
+  { id:'order',    top:'MyAdmin',     bot:'Order Devices'},
+  { id:'database', top:'MyGeotab',    bot:'Register DB' },
+  { id:'shipment', top:'MyAdmin',     bot:'Devices Ready'},
+  { id:'lma',      top:'AppExchange', bot:'License'     },
+  { id:'complete', top:'Complete',    bot:'✓'           },
+];
+
+const STAGE_IDX = Object.fromEntries(STAGES.map((s,i) => [s.id, i]));
+
+// ── STATE ─────────────────────────────────────────────────────
+let lastLogCount = 0;
+let lastFields   = {};
+
+// ── API ───────────────────────────────────────────────────────
+async function apiPost(path, body = {}) {
+  const r = await fetch(API + path, {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(body)
+  });
+  return r.json();
+}
+async function apiGet(path) {
+  const r = await fetch(API + path);
+  return r.json();
+}
+
+// ── PIPELINE ─────────────────────────────────────────────────
+function renderPipeline(stage, status) {
+  const activeIdx = STAGE_IDX[stage] ?? 0;
+  const isHold    = status === 'awaiting_review';
+  const isDone    = status === 'complete';
+  const isNext    = status === 'awaiting_next';
+  const isPolling = status === 'polling_shipment';
+
+  const trackHtml = STAGES.map((s, i) => {
+    let cls = 'pending';
+    if (isDone || i < activeIdx)        cls = 'done';
+    else if (i === activeIdx && isNext) cls = 'done';   // show current as done while paused
+    else if (i === activeIdx)           cls = isHold ? 'hold' : 'active';
+    return `<div class="stage-chevron ${cls}" data-idx="${i}">
+      <span class="s-top">${s.top}</span>
+      <span class="s-bot">${s.bot}</span>
+    </div>`;
+  }).join('');
+
+  document.getElementById('pipelineTrack').innerHTML = trackHtml;
+
+  // Arrow row
+  const arrowColor = isHold ? '#b45309' : '#0078D3';
+  const arrowsHtml = STAGES.map((s, i) => {
+    const isActive = (i === activeIdx) && !isDone && !isNext;    return `<div style="flex:1">${isActive ? `
+      <div class="stage-arrow-down">
+        <svg width="20" height="10" viewBox="0 0 20 10">
+          <polygon points="10,10 0,0 20,0" fill="${arrowColor}"/>
+        </svg>
+      </div>` : ''}</div>`;
+  }).join('');
+  document.getElementById('pipelineArrows').innerHTML = arrowsHtml;
+}
+
+// ── ACTIVE PANEL ─────────────────────────────────────────────
+function renderPanel(state) {
+  const panel   = document.getElementById('activePanel');
+  const status  = state.status;
+  const stage   = state.currentStage || 'trigger';
+  const fields  = state.fields || {};
+  const order   = state.pendingOrder;
+  const isHold  = status === 'awaiting_review';
+  const isDone  = status === 'complete';
+  const isIdle  = status === 'idle';
+  const day     = `Day ${fields.workflowDay || 1}`;
+
+  panel.className = 'active-panel' +
+    (isHold ? ' is-hold' : isDone ? ' is-complete' : '');
+
+  let tag, title, subtitle, details = [], statusHtml, actionsHtml = '';
+
+  if (isIdle) {
+    tag      = 'Ready to start';
+    title    = 'Geotab &amp; Check-Fleet Onboarding Agent';
+    subtitle = 'Automates 5-system onboarding when Salesforce Opportunity closes';
+    statusHtml = `<div class="panel-status"><span>🤖</span><span>Click Start Onboarding to begin</span></div>`;
+    actionsHtml = `<button class="btn btn-blue" onclick="startWorkflow()">▶ Start Onboarding</button>`;
+
+  } else if (status === 'polling_shipment') {
+    tag      = 'Step 5 of 7 — MyAdmin: Devices Ready';
+    title    = '📡 Polling MyAdmin — Devices Provisioning';
+    subtitle = 'Waiting for ordered devices to appear in MyAdmin account with serial numbers';
+    details  = [
+      { lbl:'Order #',   val:fields.deviceOrderNumber || '—' },
+      { lbl:'Devices',   val:'5 × Geotab GO9 (T-Mobile LTE)' },
+      { lbl:'Ship To',   val:'Acme Field Services' },
+      { lbl:'Status',    val:'In Transit', cls:'blue' },
+    ];
+    statusHtml  = `<div class="panel-status"><div class="spinner"></div><span>Polling MyAdmin for delivery status...</span></div>`;
+    actionsHtml = `<div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+      <button class="btn btn-blue" id="deliveryBtn" onclick="confirmDelivery()">📡 Devices Ready in MyAdmin</button>
+      <div style="font-size:10px;color:var(--text-4);font-family:var(--mono)">Demo: simulates devices appearing in MyAdmin account</div>
+    </div>`;
+
+  } else if (status === 'awaiting_next') {
+    // Step completed — waiting for rep to click Next
+    const doneLabels = {
+      step1_done:  ['Step 1 Complete — SF Trigger',        '✓ Opportunity read and workflow initialized',     'Salesforce Opportunity parsed successfully.'],
+      step2_done:  ['Step 2 Complete — MyAdmin Customer',  '✓ Customer created in Geotab MyAdmin',            `Customer ID: ${fields.myAdminCustomerId || '—'} provisioned.`],
+      step3b_done: ['Step 3 Complete — Device Order',      '✓ Device order submitted to MyAdmin',             `Order ${fields.deviceOrderNumber || '—'} confirmed.`],
+      step4_done:  ['Step 4 Complete — MyGeotab Database', '✓ MyGeotab database provisioned',                 `Database: ${fields.myGeotabDatabase || '—'} is live.`],
+      step5_done:  ['Step 5 Complete — MyAdmin: Devices Ready','✓ Devices provisioned in MyAdmin — ready to add to MyGeotab database', `${fields.devicesAssigned || 5} × GO9 units with serial numbers confirmed.`],
+      step6_done:  ['Step 6 Complete — AppExchange License','✓ AppExchange License Management App: License Activated', `License status: ${fields.lmaLicenseStatus || 'Active'}.`],
+    };
+    const info = doneLabels[state.nextStep] || ['Step Complete', '✓ Step completed successfully', 'Ready for next step.'];
+    tag      = info[0];
+    title    = info[1];
+    subtitle = info[2];
+
+    if (fields.myAdminCustomerId) details.push({ lbl:'MyAdmin ID',  val:fields.myAdminCustomerId, cls:'green' });
+    if (fields.deviceOrderNumber) details.push({ lbl:'Order #',     val:fields.deviceOrderNumber, cls:'green' });
+    if (fields.myGeotabDatabase)  details.push({ lbl:'Database',    val:fields.myGeotabDatabase,  cls:'green' });
+    if (fields.lmaLicenseStatus)  details.push({ lbl:'LMA',         val:fields.lmaLicenseStatus,  cls:'green' });
+
+    statusHtml  = `<div class="panel-status" style="border-color:rgba(10,122,79,0.25);color:var(--green)"><span>✓</span><span>Step complete — click Next to continue</span></div>`;
+    actionsHtml = `<button class="btn btn-blue" id="nextStepBtn" onclick="advanceNext()">Next Step →</button>`;
+
+  } else if (status === 'error') {
+    tag   = 'Error';
+    title = '⚠ Workflow error — check server console';
+    subtitle = 'Reset and try again';
+    statusHtml = `<div class="panel-status is-hold"><span>⚠</span><span>An error occurred.</span></div>`;
+
+  } else if (isDone) {
+    tag      = 'Onboarding Complete';
+    title    = '✓ Geotab data live in Salesforce with Check-Fleet App';
+    subtitle = 'All 5 systems configured. Customer fully active.';
+    details  = [
+      { lbl:'MyAdmin ID',   val:`${fields.myAdminCustomerId} ✓`, cls:'green' },
+      { lbl:'Database',     val:`${fields.myGeotabDatabase || '—'} ✓`,  cls:'green' },
+      { lbl:'Devices',      val:`${fields.devicesAssigned || 5} × GO9 ✓`, cls:'green' },
+      { lbl:'LMA License',  val:`${fields.lmaLicenseStatus || 'Active'} ✓`, cls:'green' },
+    ];
+    statusHtml = `<div class="panel-status"><span>🎉</span><span>Complete — all systems provisioned</span></div>`;
+
+  } else if (isHold && state.reviewType === 'device_order') {
+    tag      = 'Step 3 of 7 — MyAdmin: Order Devices · Human Review Required';
+    title    = '⏸ Confirm & Place Device Order in MyAdmin';
+    subtitle = 'Agent prepared all details — rep approval required before submission';
+    if (order) {
+      details = [
+        { lbl:'Customer',    val:`${state.accountName || '—'} (ID: ${fields.myAdminCustomerId || '—'})` },
+        { lbl:'Product',     val:'Geotab GO9 (T-Mobile LTE)' },
+        { lbl:'Quantity',    val:`${order.quantity} units` },
+        { lbl:'Device Plan', val:'Base Mode' },
+        { lbl:'Ship To',     val:order.shipToName || '—' },
+        { lbl:'Shipping',    val:order.shippingFeeName || 'Standard' },
+        { lbl:'PO Number',   val:order.purchaseOrderNo || '—' },
+      ];
+    }
+    statusHtml  = `<div class="panel-status"><span>⏸</span><span>Order ready — click Confirm to submit to MyAdmin</span></div>`;
+    actionsHtml = `<button class="btn btn-ghost" onclick="window.open('https://myadmintest.geotab.com','_blank')" style="margin-right:8px">→ Open MyAdmin</button>
+      <button class="btn btn-green" id="confirmOrderBtn" onclick="confirmOrder()">✓ Confirm &amp; Place Order</button>`;
+
+  } else {
+    // Working states
+    const info = {
+      trigger:  ['Step 1 of 7 — SF Trigger',         'Reading Salesforce Opportunity',            'Parsing Opportunity fields...'],
+      customer: ['Step 2 of 7 — MyAdmin: Add Customer', 'Creating Customer in Geotab MyAdmin',    'Calling AddEditCustomerAsync...'],
+      order:    ['Step 3 of 7 — MyAdmin: Order Devices', 'Preparing Device Order Details',        'Looking up shipping, plan & contact...'],
+      database: ['Step 4 of 7 — MyGeotab: Register Database', 'Provisioning MyGeotab Database',  'Calling CreateDatabase API...'],
+      shipment: ['Step 5 of 7 — MyAdmin: Devices Ready', 'Polling MyAdmin — Waiting for Device Provisioning', 'Checking if ordered devices appear in MyAdmin account...'],
+      lma:      ['Step 6 of 7 — AppExchange: Activate License', 'AppExchange License Management App: License Activated', 'Updating sfLma__License__c...'],
+    }[stage] || ['Processing...', 'Agent working...', 'Please wait...'];
+
+    tag      = info[0];
+    title    = info[1];
+    subtitle = info[2];
+
+    if (fields.myAdminCustomerId) details.push({ lbl:'MyAdmin ID',  val:fields.myAdminCustomerId, cls:'green' });
+    if (fields.deviceOrderNumber) details.push({ lbl:'Order #',     val:fields.deviceOrderNumber });
+    if (fields.myGeotabDatabase)  details.push({ lbl:'Database',    val:fields.myGeotabDatabase,  cls:'blue'  });
+    if (fields.lmaLicenseStatus)  details.push({ lbl:'LMA',         val:fields.lmaLicenseStatus,  cls:'green' });
+
+    statusHtml = `<div class="panel-status"><div class="spinner"></div><span>${info[2]}</span></div>`;
+  }
+
+  const detailsHtml = details.map(d => `
+    <div class="detail-chip">
+      <div class="detail-lbl">${d.lbl}</div>
+      <div class="detail-val ${d.cls||''}">${d.val}</div>
+    </div>`).join('');
+
+  panel.innerHTML = `
+    <div class="panel-topbar">
+      <div class="panel-tag"><div class="tag-dot"></div>${tag}</div>
+      <div class="panel-day">${day}</div>
+    </div>
+    <div class="panel-main">
+      <div class="panel-title">${title}</div>
+      <div class="panel-subtitle">${subtitle}</div>
+      <div class="panel-details">${detailsHtml}</div>
+      ${statusHtml}
+      ${actionsHtml ? `<div class="panel-actions">${actionsHtml}</div>` : ''}
+    </div>`;
+}
+
+// ── LOG ───────────────────────────────────────────────────────
+function renderLog(logs) {
+  if (!logs || logs.length <= lastLogCount) return;
+  const body    = document.getElementById('logBody');
+  const newLogs = logs.slice(lastLogCount);
+  lastLogCount  = logs.length;
+
+  newLogs.forEach((entry, i) => {
+    setTimeout(() => {
+      const type = entry.type || 'info';
+      const div  = document.createElement('div');
+      div.className = 'log-entry';
+      div.innerHTML = `
+        <div class="log-dot dot-${type}"></div>
+        <div class="log-time">${entry.time || ''}</div>
+        <div class="log-msg ${type}">${entry.msg}</div>`;
+      body.appendChild(div);
+      body.scrollTop = body.scrollHeight;
+    }, i * 100);
+  });
+}
+
+// ── RESULTS PANEL ─────────────────────────────────────────────
+const RESULTS_STAGES = [
+  { key:'trigger',  label:'Opportunity Closed',          detail: s => s.accountName ? `${s.accountName} · Closed Won` : null },
+  { key:'customer', label:'MyAdmin Customer Created',    detail: s => s.fields?.myAdminCustomerId ? `Customer ID: ${s.fields.myAdminCustomerId}` : null },
+  { key:'order',    label:'Device Order Placed',         detail: s => s.fields?.deviceOrderNumber  ? `5 × GO9 · ${s.fields.deviceOrderNumber}` : null },
+  { key:'database', label:'MyGeotab Database Provisioned', detail: s => s.fields?.myGeotabDatabase ? `${s.fields.myGeotabDatabase}` : null },
+  { key:'shipment', label:'Devices Provisioned in MyAdmin', detail: s => s.fields?.devicesAssigned ? `${s.fields.devicesAssigned} × GO9 — serial numbers confirmed, ready for MyGeotab DB` : null },
+  { key:'lma',      label:'Check-Fleet License Activated', detail: s => s.fields?.lmaLicenseStatus ? `License status: ${s.fields.lmaLicenseStatus}` : null },
+];
+
+const STAGE_ORDER = ['trigger','customer','order','database','shipment','lma','complete'];
+
+function renderResults(state) {
+  const body = document.getElementById('resultsBody');
+  if (!body) return;
+  const activeIdx = STAGE_ORDER.indexOf(state.currentStage || 'trigger');
+  const isDone    = state.status === 'complete';
+
+  body.innerHTML = RESULTS_STAGES.map((r, i) => {
+    const stageIdx  = STAGE_ORDER.indexOf(r.key);
+    const completed = isDone || stageIdx < activeIdx ||
+                      (stageIdx === activeIdx && state.status === 'awaiting_next');
+    const detail    = completed ? r.detail(state) : null;
+    const cls       = completed ? 'done' : 'pending';
+
+    return `<div class="result-row ${completed ? '' : 'pending'}">
+      <div class="result-icon ${cls}">${completed ? '✓' : `${i+1}`}</div>
+      <div class="result-text">
+        <div class="result-label ${completed ? '' : 'pending'}">${r.label}</div>
+        ${detail ? `<div class="result-detail">${detail}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function updateSFFields(fields) {
+  // kept as no-op so poll() calls don't break; results panel replaces SF grid
+  lastFields = { ...(fields || {}) };
+}
+
+// ── AGENT PILL ────────────────────────────────────────────────
+function updatePill(status) {
+  const pill = document.getElementById('agentPill');
+  const text = document.getElementById('agentPillText');
+  const dot  = pill.querySelector('.pulse-dot');
+
+  const styles = {
+    idle:            { bg:'#f3f4f6', border:'#d1d5db', color:'#6b7280', label:'Idle' },
+    running:         { bg:'var(--green-lt)', border:'var(--green-ring)', color:'var(--green)', label:'Agent Running' },
+    awaiting_next:   { bg:'var(--blue-lt)', border:'var(--blue-ring)', color:'var(--blue)', label:'Step Complete' },
+    awaiting_review: { bg:'var(--amber-lt)', border:'var(--amber-ring)', color:'var(--amber)', label:'Awaiting Review' },
+    polling_shipment:{ bg:'var(--blue-lt)', border:'var(--blue-ring)', color:'var(--blue)', label:'Monitoring Shipment' },
+    complete:        { bg:'var(--green-lt)', border:'var(--green-ring)', color:'var(--green)', label:'Complete' },
+    error:           { bg:'#fef2f2', border:'rgba(220,38,38,0.25)', color:'#dc2626', label:'Error' },
+  };
+
+  const s = styles[status] || styles.running;
+  pill.style.background  = s.bg;
+  pill.style.borderColor = s.border;
+  pill.style.color       = s.color;
+  dot.style.background   = 'currentColor';
+  text.textContent       = s.label;
+}
+
+// ── POLL ─────────────────────────────────────────────────────
+async function poll() {
+  try {
+    const state = await apiGet('/api/state');
+    const stage = state.currentStage || 'trigger';
+
+    // Header
+    if (state.accountName) {
+      document.getElementById('hdr-customer').textContent = state.accountName;
+    }
+
+    renderPipeline(stage, state.status);
+    renderPanel(state);
+    renderLog(state.log);
+    renderResults(state);
+    updateSFFields(state.fields);
+    updatePill(state.status);
+
+    // Start button visibility
+    const btn = document.getElementById('startBtn');
+    if (state.status === 'idle') {
+      btn.style.display   = '';
+      btn.disabled        = false;
+      btn.textContent     = '▶ Start Onboarding';
+    } else if (state.status === 'complete') {
+      btn.style.display   = '';
+      btn.disabled        = true;
+      btn.textContent     = '✓ Complete';
+    } else {
+      btn.style.display = 'none';
+    }
+
+  } catch(e) {
+    // Server not reachable — show offline state
+    document.getElementById('agentPillText').textContent = 'Server Offline';
+  }
+}
+
+// ── ACTIONS ──────────────────────────────────────────────────
+async function startWorkflow() {
+  const btn = document.getElementById('startBtn');
+  btn.disabled    = true;
+  btn.textContent = 'Starting...';
+  lastLogCount    = 0;
+  lastFields      = {};
+  document.getElementById('logBody').innerHTML    = '';
+  document.getElementById('resultsBody').innerHTML = '';
+  await apiPost('/api/start', { opportunityId: OPP_ID });
+}
+
+async function confirmDelivery() {
+  const btn = document.getElementById('deliveryBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Confirming...'; }
+  await apiPost('/api/confirm-delivery');
+}
+
+async function advanceNext() {
+  const btn = document.getElementById('nextStepBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Advancing...'; }
+  await apiPost('/api/next');
+}
+
+async function confirmOrder() {
+  const btn = document.getElementById('confirmOrderBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Submitting...'; }
+  await apiPost('/api/resume', { reviewType: 'device_order' });
+}
+
+async function resetDemo() {
+  lastLogCount = 0;
+  lastFields   = {};
+  document.getElementById('logBody').innerHTML    = '';
+  document.getElementById('resultsBody').innerHTML = '';
+  await apiPost('/api/reset');
+  const btn = document.getElementById('startBtn');
+  btn.style.display   = '';
+  btn.disabled        = false;
+  btn.textContent     = '▶ Start Onboarding';
+  await poll();
+}
+
+// ── INIT ─────────────────────────────────────────────────────
+poll();
+setInterval(poll, 2000);
+</script>
+</body>
+</html>
